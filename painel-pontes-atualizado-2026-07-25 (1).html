@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<title>Painel de Gestão das Comunidades CSA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#F3F6FA;
+    --surface:#FFFFFF;
+    --surface-muted:#EEF2F8;
+    --border:#DEE6F0;
+    --ink:#0E2036;
+    --ink-soft:#5A6B80;
+    --ink-faint:#93A1B3;
+    --navy-900:#081B33;
+    --navy-800:#0B2C52;
+    --navy-700:#0F3F73;
+    --navy-500:#156AA6;
+    --navy-100:#E4ECF6;
+    --amber-600:#B8791A;
+    --amber-100:#FBEED9;
+    --terra-700:#B4472B;
+    --terra-100:#F8E2DB;
+    --green-700:#3F7D5C;
+    --green-100:#E1F0E6;
+    --orange-600:#E06A0F;
+    --orange-500:#F58220;
+    --orange-100:#FDEBDB;
+    --sidebar-w:240px;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== App shell ===== */
+  .shell{display:flex;min-height:100vh;}
+
+  /* ===== Sidebar ===== */
+  .sidebar{
+    width:var(--sidebar-w);flex-shrink:0;position:relative;overflow:hidden;
+    background:linear-gradient(160deg,#081B33 0%,#0F3F73 60%,#156AA6 130%);
+    padding:26px 18px;display:flex;flex-direction:column;
+  }
+  .sidebar-texture{position:absolute;inset:0;opacity:.5;pointer-events:none;}
+  .sidebar > *{position:relative;z-index:2;}
+
+  .brandmark{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .brandmark .badge{
+    width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.14);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    border:1px solid rgba(255,255,255,.28);
+  }
+  .brandmark .name{display:flex;flex-direction:column;line-height:1;}
+  .brandmark .name .brand-csa{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;color:#fff;letter-spacing:.05em;}
+  .brandmark .name .brand-equatorial{font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:10.5px;color:var(--orange-500);letter-spacing:.24em;text-transform:uppercase;margin-top:3px;}
+
+  nav.navlist{display:flex;flex-direction:column;gap:4px;margin-bottom:auto;margin-top:22px;}
+  .navlink{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;
+    color:#CBDCEC;font-size:13.5px;font-weight:500;cursor:pointer;border:1px solid transparent;
+    border-left:3px solid transparent;transition:background .15s;
+  }
+  .navlink svg{flex-shrink:0;opacity:.9;}
+  .navlink:hover{background:rgba(255,255,255,.07);}
+  .navlink.active{background:rgba(255,255,255,.12);color:#fff;border-left:3px solid var(--orange-500);}
+
+  .sidebar-foot{padding-top:18px;border-top:1px solid rgba(255,255,255,.14);}
+  .node-line{display:flex;align-items:center;margin-bottom:10px;}
+  .sidebar-foot .cap{font-size:10.5px;color:#9FBBD6;letter-spacing:.06em;}
+
+  /* ===== Main ===== */
+  .main{flex:1;min-width:0;}
+  .topbar{
+    background:var(--surface);border-bottom:1px solid var(--border);
+    padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;
+    position:sticky;top:0;z-index:10;
+  }
+  .topbar-eyebrow{font-family:'Space Grotesk',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--orange-600);margin:0 0 3px;}
+  .topbar-title{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;color:var(--navy-900);margin:0;}
+  .topbar-sub{font-size:12.5px;color:var(--ink-soft);margin:2px 0 0;max-width:520px;}
+  .topbar-right{display:flex;align-items:center;gap:20px;flex-shrink:0;}
+  .csa-logo{display:flex;align-items:center;padding-left:18px;border-left:1px solid var(--border);}
+  .csa-logo svg{display:block;height:34px;width:auto;}
+  .content{padding:26px 32px 60px;max-width:1320px;}
+
+  /* ===== Metrics ===== */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:16px;margin-bottom:22px;}
+  .metric{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:20px 20px 22px;box-shadow:0 8px 20px rgba(11,44,82,.06);
+    border-top:3px solid var(--navy-700);min-width:0;display:flex;flex-direction:column;
+  }
+  .metric.alert{border-top-color:var(--terra-700);}
+  .metric.warn{border-top-color:var(--amber-600);}
+  .metric.good{border-top-color:var(--orange-600);}
+  .metric.good .icon{background:var(--orange-100);color:var(--orange-600);}
+  .metric.good .value{color:var(--orange-600);}
+  .metric .icon{
+    width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    background:var(--navy-100);color:var(--navy-700);margin-bottom:14px;flex-shrink:0;
+  }
+  .metric.alert .icon{background:var(--terra-100);color:var(--terra-700);}
+  .metric.warn .icon{background:var(--amber-100);color:var(--amber-600);}
+  .metric .label{font-size:12.5px;color:var(--ink-soft);margin-bottom:6px;white-space:normal;line-height:1.35;overflow-wrap:break-word;}
+  .metric .value{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--navy-900);
+    font-size:clamp(16px, 1.5vw, 24px);line-height:1.25;white-space:normal;overflow-wrap:break-word;word-break:break-word;
+  }
+  .metric.alert .value{color:var(--terra-700);}
+  .metric.warn .value{color:var(--amber-600);}
+
+  /* ===== Panel ===== */
+  .panel{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    box-shadow:0 8px 22px rgba(11,44,82,.06);padding:20px 22px;margin-bottom:20px;
+  }
+  .panel h2{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;margin:0 0 14px;color:var(--navy-900);}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .panel-head h2{margin:0;}
+  .charts-row{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;}
+
+  .btn-ghost-sm{
+    height:30px;padding:0 13px;border-radius:20px;border:1px dashed var(--border);
+    background:transparent;color:var(--ink-soft);font-size:12px;font-weight:500;
+    cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-ghost-sm:hover{border-color:var(--navy-700);color:var(--navy-700);}
+  .btn-ghost-sm.active{background:var(--navy-100);color:var(--navy-700);border-style:solid;border-color:var(--navy-700);}
+
+  /* Toolbar */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px;}
+  .toolbar input[type=text], .toolbar select{
+    height:37px;border:1px solid var(--border);border-radius:9px;background:var(--surface-muted);
+    padding:0 11px;font-size:13px;color:var(--ink);font-family:inherit;
+  }
+  .toolbar input[type=text]{flex:1;min-width:200px;}
+  .btn{
+    height:37px;padding:0 16px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink);font-size:13px;font-weight:500;
+    cursor:pointer;font-family:inherit;transition:background .15s;
+  }
+  .btn:hover{background:var(--surface-muted);}
+  .btn-primary{background:var(--orange-600);color:#fff;border-color:var(--orange-600);}
+  .btn-primary:hover{background:#C25A0C;}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--ink-faint);font-weight:700;padding:9px 11px;border-bottom:2px solid var(--border);
+    cursor:pointer;white-space:nowrap;background:var(--surface-muted);
+  }
+  thead th:first-child{border-top-left-radius:8px;}
+  thead th:last-child{border-top-right-radius:8px;}
+  thead th:hover{color:var(--navy-700);}
+  tbody td{padding:11px;border-bottom:1px solid var(--surface-muted);vertical-align:middle;}
+  tbody tr:hover{background:var(--surface-muted);}
+  tbody tr:nth-child(even){background:rgba(238,242,248,.4);}
+  tbody tr:nth-child(even):hover{background:var(--surface-muted);}
+
+  /* Coluna "Ponte" congelada ao rolar a tabela para o lado */
+  thead th:first-child, tbody td:first-child{
+    position:sticky;left:0;z-index:2;background:var(--surface-muted);
+    box-shadow:2px 0 6px rgba(11,44,82,.08);
+  }
+  tbody td:first-child{background:var(--surface);font-weight:600;}
+  tbody tr:nth-child(even) td:first-child{background:#F3F6FA;}
+  tbody tr:hover td:first-child{background:var(--surface-muted);}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.01em;}
+  .pill-navy{background:var(--navy-100);color:var(--navy-700);}
+  .pill-terra{background:var(--terra-100);color:var(--terra-700);}
+  .pill-green{background:var(--green-100);color:var(--green-700);}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{
+    width:29px;height:29px;border-radius:7px;border:1px solid var(--border);background:var(--surface);
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-soft);
+  }
+  .icon-btn:hover{background:var(--surface-muted);color:var(--navy-700);}
+  .empty{padding:40px;text-align:center;color:var(--ink-faint);font-size:13px;}
+  .footnote{font-size:11.5px;color:var(--ink-faint);margin-top:10px;}
+
+  /* ===== Bases tab ===== */
+  .link-form{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px;}
+  .link-form input{
+    height:37px;border:1px solid var(--border);border-radius:9px;background:var(--surface-muted);
+    padding:0 11px;font-size:13px;color:var(--ink);font-family:inherit;
+  }
+  .link-form input#linkLabel{flex:1;min-width:220px;}
+  .link-form input#linkUrl{flex:1.4;min-width:260px;}
+  .bases-access{margin-bottom:14px;}
+  .drill-scope-label{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;}
+  .drill-scope-label strong{color:var(--navy-900);font-weight:700;}
+
+  .file-list{margin-top:20px;display:flex;flex-direction:column;gap:8px;}
+  .file-row{
+    display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);
+    border-radius:11px;background:var(--surface);
+  }
+  .file-row .f-icon{
+    width:36px;height:36px;border-radius:9px;background:var(--navy-100);color:var(--navy-700);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .file-row .f-info{flex:1;min-width:0;}
+  .file-row .f-name{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .file-row .f-meta{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+
+  .loading{padding:80px;text-align:center;color:var(--ink-faint);font-size:13px;}
+
+  /* Modal */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(8,27,51,.4);align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--surface);border-radius:14px;max-width:580px;width:100%;max-height:88vh;overflow:auto;padding:24px 26px;box-shadow:0 16px 46px rgba(8,27,51,.3);}
+  .modal h2{margin-top:0;font-family:'Space Grotesk',sans-serif;color:var(--navy-900);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-grid .full{grid-column:1/-1;}
+  label{font-size:12px;color:var(--ink-soft);display:block;margin-bottom:4px;}
+  input, select, textarea{
+    width:100%;height:37px;border:1px solid var(--border);border-radius:9px;
+    padding:0 11px;font-size:13px;font-family:inherit;color:var(--ink);background:#fff;
+  }
+  textarea{height:64px;padding:9px 11px;resize:vertical;}
+  .field{margin-bottom:4px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
+
+  @media(max-width:980px){
+    .shell{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:row;align-items:center;padding:14px 18px;}
+    nav.navlist{flex-direction:row;margin:0 0 0 auto;}
+    .sidebar-foot{display:none;}
+    .metrics{grid-template-columns:repeat(2,1fr);}
+    .charts-row{grid-template-columns:1fr;}
+    .form-grid{grid-template-columns:1fr;}
+    .content{padding:20px 16px 50px;}
+    .topbar{padding:16px;flex-wrap:wrap;}
+    .topbar-right{width:100%;justify-content:space-between;}
+    .csa-logo{padding-left:0;border-left:none;}
+    .csa-logo svg{height:28px;}
+  }
+</style>
+</head>
+<body>
+<div class="shell" id="app">
+    <aside class="sidebar">
+      <svg class="sidebar-texture" viewBox="0 0 240 700" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,120 C 60,160 160,90 240,140 L240,60 C160,20 60,90 0,50 Z" fill="rgba(255,255,255,0.045)"></path>
+        <path d="M0,520 C 70,480 170,560 240,510 L240,620 C170,660 70,590 0,630 Z" fill="rgba(255,255,255,0.04)"></path>
+        <circle cx="40" cy="330" r="2.5" fill="rgba(255,255,255,.3)"></circle>
+        <circle cx="200" cy="380" r="2" fill="rgba(255,255,255,.22)"></circle>
+        <circle cx="170" cy="250" r="2" fill="rgba(255,255,255,.2)"></circle>
+      </svg>
+      <div class="brandmark">
+        <div class="badge">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z" fill="#F58220"></path></svg>
+        </div>
+        <div class="name"><span class="brand-csa">CSA</span><span class="brand-equatorial">Equatorial</span></div>
+      </div>
+      <nav class="navlist">
+        <div class="navlink active" data-tab="painel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>Painel</div>
+        <div class="navlink " data-tab="bases"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"></path></svg>Bases</div>
+      </nav>
+      <div class="sidebar-foot">
+        <svg class="node-line" width="100%" height="8" viewBox="0 0 200 8" preserveAspectRatio="none">
+          <line x1="2" y1="4" x2="198" y2="4" stroke="rgba(255,255,255,.22)" stroke-width="1"></line>
+          <circle cx="2" cy="4" r="2" fill="#F58220"></circle><circle cx="26.5" cy="4" r="2" fill="#F58220"></circle><circle cx="51" cy="4" r="2" fill="#F58220"></circle><circle cx="75.5" cy="4" r="2" fill="#F58220"></circle><circle cx="100" cy="4" r="2" fill="#F58220"></circle><circle cx="124.5" cy="4" r="2" fill="#F58220"></circle><circle cx="149" cy="4" r="2" fill="#F58220"></circle><circle cx="173.5" cy="4" r="2" fill="#F58220"></circle><circle cx="198" cy="4" r="2" fill="#F58220"></circle>
+        </svg>
+        <div class="cap">CONTROLE DE PONTES</div>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <p class="topbar-eyebrow">Executiva de Comunidades</p>
+          <p class="topbar-title">Painel de Gestão das Comunidades CSA</p>
+          <p class="topbar-sub">Visão integrada das comunidades, clientes, condições de abastecimento e oportunidades de atuação.</p>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-primary" id="addBtn">+ Nova ponte</button>
+          <div class="csa-logo" title="CSA Equatorial — Concessionária de Saneamento do Amapá">
+            <svg viewBox="0 0 258 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logotipo CSA — Concessionária de Saneamento do Amapá">
+              <text x="0" y="52" font-family="'Space Grotesk',sans-serif" font-weight="700" font-size="54" letter-spacing="-1" fill="#2CA9E0">CSA</text>
+              <text x="130" y="24" font-family="'Inter',sans-serif" font-weight="600" font-size="13.5" fill="#2CA9E0">Concessionária</text>
+              <text x="130" y="40" font-family="'Inter',sans-serif" font-weight="600" font-size="13.5" fill="#2CA9E0">de Saneamento</text>
+              <text x="130" y="56" font-family="'Inter',sans-serif" font-weight="600" font-size="13.5" fill="#2CA9E0">do Amapá</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="content" id="tabContent">
+    <div class="metrics" id="metrics">
+    <div class="metric">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21C12 21 5 13.5 5 9a7 7 0 0 1 14 0c0 4.5-7 12-7 12Z"></path><circle cx="12" cy="9" r="2.5"></circle></svg></div>
+      <div class="label">Pontes listadas</div>
+      <div class="value" title="13">13</div>
+    </div>
+    <div class="metric">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M9 12h6M12 8v8"></path></svg></div>
+      <div class="label">Débito total</div>
+      <div class="value" title="R$&nbsp;1.245.828,83">R$&nbsp;1.245.828,83</div>
+    </div>
+    <div class="metric">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"></circle><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M22 20c0-2.6-2-4.8-4.8-5.6"></path></svg></div>
+      <div class="label">Matrículas CSA</div>
+      <div class="value" title="1.520">1.520</div>
+    </div>
+    <div class="metric">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg></div>
+      <div class="label">UC CEA</div>
+      <div class="value" title="0">0</div>
+    </div>
+    <div class="metric">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z"></path><path d="M9 16c0 1.4 1.2 2.5 3 2.5" stroke-linecap="round"></path></svg></div>
+      <div class="label">Fonte de abastecimento alternativa</div>
+      <div class="value" title="0 ponte(s)">0</div>
+    </div>
+    <div class="metric good">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z"></path><path d="M9 16c0 1.4 1.2 2.5 3 2.5" stroke-linecap="round"></path></svg></div>
+      <div class="label">Oportunidade de adesão</div>
+      <div class="value" title="50">50</div>
+    </div>
+    <div class="metric alert">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></div>
+      <div class="label">Pontes bloqueadas</div>
+      <div class="value" title="8">8</div>
+    </div>
+    <div class="metric warn">
+      <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg></div>
+      <div class="label">Ações em atraso</div>
+      <div class="value" title="3">3</div>
+    </div>
+  </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Indicadores</h2>
+        <button class="btn-ghost-sm active" id="toggleLabelsBtn">Ocultar valores nos gráficos</button>
+      </div>
+      <div class="charts-row">
+        <div>
+          <h2>Débito por bairro</h2>
+          <div style="position:relative;height:220px;">
+            <canvas id="barChart" role="img" aria-label="Gráfico de barras do débito total por bairro" width="760" height="330" style="display: block; box-sizing: border-box; height: 220px; width: 507px;"></canvas>
+          </div>
+        </div>
+        <div>
+          <h2>Situação de bloqueio</h2>
+          <div style="position:relative;height:220px;">
+            <canvas id="donutChart" role="img" aria-label="Gráfico de rosca com pontes bloqueadas versus livres" width="585" height="330" style="display: block; box-sizing: border-box; height: 220px; width: 390px;"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Análise por bairro e logradouro</h2>
+      </div>
+      <div class="toolbar">
+        <select id="drillBairroSelect">
+          <option value="">Selecione um bairro</option>
+          <option>Congós</option><option>Jardim Felicidade</option><option>Pedra Branca</option><option>São Lazáro</option>
+        </select>
+        <select id="drillLogradouroSelect" disabled=""><option value="">Selecione um logradouro</option><option>24</option><option>ARTHUR ROQUE</option><option>AÇAIZAL</option><option>CABO VELHO</option><option>EDITE PENAFORTE</option><option>GUAJARINA DUARTE MENDES</option><option>JOAO GUERRA</option><option>LAUDELINO ARAUJO CORREA</option><option>LUIS ALVES CUNHA</option><option>NOVA COLINA</option><option>PS. ALEXANDRE FERREIRA</option><option>PS. FALCONERY DE SENA</option><option>PS. LUIZ LINO</option></select>
+      </div>
+      <div id="drillChartWrap" style="position:relative;height:280px;"><div class="empty">Selecione um bairro para ver o débito e o IAR de cada logradouro.</div></div>
+      <div id="drillStats" style="margin-top:18px;display:none;"></div>
+    </div>
+    <div class="panel">
+      <h2>Pontes cadastradas</h2>
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Buscar ponte…" value="">
+        <select id="bairroSelect"><option value="">Todos os bairros</option><option>Congós</option><option>Jardim Felicidade</option><option>Pedra Branca</option><option>São Lazáro</option></select>
+        <select id="areaSelect"><option value="">Todas as áreas</option><option>COI</option><option>ENGENHARIA</option><option>GER. COMERCIAL</option></select>
+        <select id="statusSelect">
+          <option value="">Todos os status</option>
+          <option>No prazo</option>
+          <option>Atrasado</option>
+          <option>Concluído</option>
+        </select>
+        <select id="bloqueioSelect">
+          <option value="">Bloqueio: todos</option>
+          <option value="SIM">Bloqueado</option>
+          <option value="NÃO">Livre</option>
+        </select>
+      </div>
+      <div id="tableWrap">
+    <div style="overflow-x:auto;">
+    <table>
+      <thead><tr>
+        <th data-key="ponte">Ponte </th><th data-key="bairro">Bairro </th><th data-key="area">Área </th><th data-key="matriculas">Matrículas </th><th data-key="debito">Débito ↓</th><th data-key="iar">IAR </th><th data-key="ucCea">UC CEA </th><th data-key="oportunidade">Oport. de adesão </th><th data-key="telhados">Qtd. telhados </th><th data-key="fonteAbastecimento">Fonte de abastecimento </th><th data-key="prazo">Prazo </th><th data-key="status">Status </th><th data-key="bloqueio">Bloqueio </th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        
+          <tr>
+            <td>NOVA COLINA</td>
+            <td>Pedra Branca</td>
+            <td>-</td>
+            <td>421</td>
+            <td>R$&nbsp;416.161,19</td>
+            <td>28%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td><span class="pill pill-navy">Livre</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p12" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p12" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>AÇAIZAL</td>
+            <td>Pedra Branca</td>
+            <td>-</td>
+            <td>297</td>
+            <td>R$&nbsp;361.801,77</td>
+            <td>16%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td><span class="pill pill-navy">Livre</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p13" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p13" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>JOAO GUERRA</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>138</td>
+            <td>R$&nbsp;113.027,13</td>
+            <td>31%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p1" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p1" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>LUIS ALVES CUNHA</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>147</td>
+            <td>R$&nbsp;90.289,38</td>
+            <td>29%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p4" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p4" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>CABO VELHO</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>75</td>
+            <td>R$&nbsp;72.971,50</td>
+            <td>25%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p6" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p6" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>EDITE PENAFORTE</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>88</td>
+            <td>R$&nbsp;44.119,00</td>
+            <td>15%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p5" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p5" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>PS. LUIZ LINO</td>
+            <td>São Lazáro</td>
+            <td>ENGENHARIA</td>
+            <td>47</td>
+            <td>R$&nbsp;38.973,75</td>
+            <td>22%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>20/07/2026</td>
+            <td><span class="pill pill-terra">Atrasado</span></td>
+            <td><span class="pill pill-navy">Livre</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p10" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p10" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>PS. FALCONERY DE SENA</td>
+            <td>São Lazáro</td>
+            <td>ENGENHARIA</td>
+            <td>67</td>
+            <td>R$&nbsp;36.506,00</td>
+            <td>32.7%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>20/07/2026</td>
+            <td><span class="pill pill-terra">Atrasado</span></td>
+            <td><span class="pill pill-navy">Livre</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p9" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p9" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>ARTHUR ROQUE</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>47</td>
+            <td>R$&nbsp;20.235,06</td>
+            <td>34%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p2" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p2" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>GUAJARINA DUARTE MENDES</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>32</td>
+            <td>R$&nbsp;18.508,84</td>
+            <td>23%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p3" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p3" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>LAUDELINO ARAUJO CORREA</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>128</td>
+            <td>R$&nbsp;15.646,51</td>
+            <td>4%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p7" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p7" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>PS. ALEXANDRE FERREIRA</td>
+            <td>Jardim Felicidade</td>
+            <td>COI</td>
+            <td>23</td>
+            <td>R$&nbsp;11.312,87</td>
+            <td>16%</td>
+            <td>—</td>
+            <td>50</td>
+            <td>—</td>
+            <td>—</td>
+            <td>11/07/2026</td>
+            <td><span class="pill pill-terra">Atrasado</span></td>
+            <td><span class="pill pill-navy">Livre</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p11" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p11" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+          <tr>
+            <td>24</td>
+            <td>Congós</td>
+            <td>GER. COMERCIAL</td>
+            <td>10</td>
+            <td>R$&nbsp;6.275,83</td>
+            <td>31%</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>30/09/2026</td>
+            <td><span class="pill pill-navy">No prazo</span></td>
+            <td><span class="pill pill-terra">Bloqueado</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="p8" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="p8" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        
+      </tbody>
+    </table>
+    </div>
+  </div>
+      <p class="footnote">Dados salvos automaticamente neste painel. Use o botão ADM, abaixo, sempre que fizer alterações manuais importantes.</p>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+        <button class="btn-ghost-sm" id="admDownloadBtn" title="Baixar o HTML do painel já com os dados atuais"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12M12 16l-4-4M12 16l4-4"></path><path d="M4 19h16"></path></svg> ADM</button>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle">Editar ponte</h2>
+    <form id="recordForm">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Nome da ponte / local</label>
+          <input type="text" id="f_ponte" required="">
+        </div>
+        <div class="field">
+          <label>Bairro</label>
+          <input type="text" id="f_bairro" required="">
+        </div>
+        <div class="field">
+          <label>Área responsável</label>
+          <input type="text" id="f_area" placeholder="Ex.: GER. COMERCIAL">
+        </div>
+        <div class="field">
+          <label>Matrículas / clientes</label>
+          <input type="number" id="f_matriculas" min="0">
+        </div>
+        <div class="field">
+          <label>Arrecadado (R$)</label>
+          <input type="number" id="f_arrecadado" min="0" step="0.01">
+        </div>
+        <div class="field">
+          <label>IAR (%)</label>
+          <input type="number" id="f_iar" min="0" max="100" step="0.1">
+        </div>
+        <div class="field">
+          <label>Débito total (R$)</label>
+          <input type="number" id="f_debito" min="0" step="0.01">
+        </div>
+        <div class="field">
+          <label>UC CEA</label>
+          <input type="number" id="f_ucCea" min="0">
+        </div>
+        <div class="field">
+          <label>Oportunidade de adesão</label>
+          <input type="number" id="f_oportunidade" min="0">
+        </div>
+        <div class="field">
+          <label>Qtd. de telhados</label>
+          <input type="number" id="f_telhados" min="0">
+        </div>
+        <div class="field">
+          <label>Fonte de abastecimento</label>
+          <input type="text" id="f_fonteAbastecimento">
+        </div>
+        <div class="field">
+          <label>Prazo</label>
+          <input type="date" id="f_prazo">
+        </div>
+        <div class="field">
+          <label>Status do prazo (automático pelo prazo — só "Concluído" é manual)</label>
+          <select id="f_status">
+            <option value="">—</option>
+            <option>No prazo</option>
+            <option>Atrasado</option>
+            <option>Concluído</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Status do bloqueio</label>
+          <select id="f_bloqueio">
+            <option value="">—</option>
+            <option>SIM</option>
+            <option>NÃO</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Ação / próximo passo</label>
+          <input type="text" id="f_acao">
+        </div>
+        <div class="field full">
+          <label>Análise do bloqueio</label>
+          <textarea id="f_analise"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="cancelBtn">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'pontes-registros';
+const BASES_LINKS_KEY = 'bases-links';
+const SHARED = false;
+const BASES_SHARED = true; // arquivos da aba Bases ficam visíveis/baixáveis por quem tiver o link
+const UPLOAD_CODE = '@Zavrit2026'; // código de acesso para liberar envio de arquivos na aba Bases
+const BACKUP_CODE = '@Zavrit2026'; // código de acesso para baixar/restaurar backup dos dados
+
+/* ===== Camada de armazenamento com fallback =====
+   Usa window.storage (persistência do painel) quando disponível.
+   Se o arquivo for aberto fora do ambiente do painel (ex.: direto no navegador,
+   após salvar o .html localmente) e window.storage não existir ou falhar,
+   os dados são guardados no localStorage do próprio navegador, para que as
+   alterações manuais não se percam. */
+async function storageGet(key, shared){
+  if(window.storage){
+    try{ return await window.storage.get(key, shared); }
+    catch(e){ /* cai para o fallback local abaixo */ }
+  }
+  try{
+    const raw = localStorage.getItem('painel_pontes::'+key+'::'+shared);
+    if(raw===null) throw new Error('chave não encontrada');
+    return { key, value: raw, shared };
+  }catch(e){ throw e; }
+}
+async function storageSet(key, value, shared){
+  if(window.storage){
+    try{ await window.storage.set(key, value, shared); return; }
+    catch(e){ /* cai para o fallback local abaixo */ }
+  }
+  try{ localStorage.setItem('painel_pontes::'+key+'::'+shared, value); }
+  catch(e){ console.error('Falha ao salvar localmente', e); }
+}
+
+const seedData = [{"id":"p1","ponte":"JOAO GUERRA","bairro":"Congós","area":"GER. COMERCIAL","matriculas":138,"arrecadado":50589.44,"iar":31,"debito":113027.13,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p2","ponte":"ARTHUR ROQUE","bairro":"Congós","area":"GER. COMERCIAL","matriculas":47,"arrecadado":10603.93,"iar":34,"debito":20235.06,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p3","ponte":"GUAJARINA DUARTE MENDES","bairro":"Congós","area":"GER. COMERCIAL","matriculas":32,"arrecadado":5634.97,"iar":23,"debito":18508.84,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p4","ponte":"LUIS ALVES CUNHA","bairro":"Congós","area":"GER. COMERCIAL","matriculas":147,"arrecadado":37946.68,"iar":29,"debito":90289.38,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p5","ponte":"EDITE PENAFORTE","bairro":"Congós","area":"GER. COMERCIAL","matriculas":88,"arrecadado":7617.45,"iar":15,"debito":44119,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p6","ponte":"CABO VELHO","bairro":"Congós","area":"GER. COMERCIAL","matriculas":75,"arrecadado":24026.8,"iar":25,"debito":72971.5,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p7","ponte":"LAUDELINO ARAUJO CORREA","bairro":"Congós","area":"GER. COMERCIAL","matriculas":128,"arrecadado":666.03,"iar":4,"debito":15646.51,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p8","ponte":"24","bairro":"Congós","area":"GER. COMERCIAL","matriculas":10,"arrecadado":2868.12,"iar":31,"debito":6275.83,"prazo":"2026-09-30","status":"No prazo","acao":"CR Buritizal","bloqueio":"SIM","analise":"Bloqueio (Cancelamento aguardando aprovação)","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p9","ponte":"PS. FALCONERY DE SENA","bairro":"São Lazáro","area":"ENGENHARIA","matriculas":67,"arrecadado":17757,"iar":32.72,"debito":36506,"prazo":"2026-07-20","status":"Atrasado","acao":"Interligação com Adutora","bloqueio":"NÃO","analise":"-","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p10","ponte":"PS. LUIZ LINO","bairro":"São Lazáro","area":"ENGENHARIA","matriculas":47,"arrecadado":11114.33,"iar":22,"debito":38973.75,"prazo":"2026-07-20","status":"Atrasado","acao":"Apresentar dia 20 orçamento de interligação","bloqueio":"NÃO","analise":"-","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p11","ponte":"PS. ALEXANDRE FERREIRA","bairro":"Jardim Felicidade","area":"COI","matriculas":23,"arrecadado":2112.11,"iar":16,"debito":11312.87,"prazo":"2026-07-11","status":"Atrasado","acao":"Mapeamento","bloqueio":"NÃO","analise":"-","ucCea":null,"oportunidade":50,"telhados":null,"fonteAbastecimento":""},{"id":"p12","ponte":"NOVA COLINA","bairro":"Pedra Branca","area":"-","matriculas":421,"arrecadado":157954.22,"iar":28,"debito":416161.19,"prazo":"","status":"","acao":"","bloqueio":"NÃO","analise":"Bloqueio","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""},{"id":"p13","ponte":"AÇAIZAL","bairro":"Pedra Branca","area":"-","matriculas":297,"arrecadado":71391.06,"iar":16,"debito":361801.77,"prazo":"","status":"","acao":"","bloqueio":"NÃO","analise":"","ucCea":null,"oportunidade":null,"telhados":null,"fonteAbastecimento":""}];
+
+let records = [];
+let baseLinks = [];
+const seedBaseLinks = [];
+let activeTab = 'painel';
+let filters = {q:'', bairro:'', area:'', status:'', bloqueio:''};
+let analysisFilters = {bairro:'', logradouro:''};
+let sort = {key:'debito', dir:'desc'};
+let editingId = null;
+let barChart, donutChart, drillChart;
+let showLabels = false;
+let basesUnlocked = false;
+if(window.ChartDataLabels){ Chart.register(ChartDataLabels); }
+
+async function loadData(){
+  try{
+    const res = await storageGet(STORAGE_KEY, SHARED);
+    records = JSON.parse(res.value);
+  }catch(e){
+    records = seedData;
+    try{ await storageSet(STORAGE_KEY, JSON.stringify(records), SHARED); }catch(e2){}
+  }
+  try{
+    const res2 = await storageGet(BASES_LINKS_KEY, BASES_SHARED);
+    baseLinks = JSON.parse(res2.value);
+  }catch(e){ baseLinks = seedBaseLinks; }
+  if(recomputeStatuses()){ await persist(); }
+  renderApp();
+}
+
+async function persist(){
+  try{ await storageSet(STORAGE_KEY, JSON.stringify(records), SHARED); }
+  catch(e){ console.error('Falha ao salvar', e); }
+}
+
+/* ===== Botão ADM: baixa o HTML completo do painel já com os dados atuais
+   (inclusive alterações manuais feitas no navegador) embutidos como estado
+   inicial. Assim, ao abrir o arquivo baixado, ele já nasce com tudo que foi
+   editado — mesmo sem depender de nenhum armazenamento externo. ===== */
+function downloadUpdatedHtml(){
+  const code = prompt('Digite o código de acesso (ADM) para baixar o HTML atualizado:');
+  if(code === null) return;
+  if(code.trim() !== BACKUP_CODE){ alert('Código incorreto.'); return; }
+  try{
+    let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    const seedDataJson = JSON.stringify(records);
+    const seedLinksJson = JSON.stringify(baseLinks);
+    html = html.replace(/const seedData = \[[\s\S]*?\];/, 'const seedData = ' + seedDataJson + ';');
+    html = html.replace(/const seedBaseLinks = \[[\s\S]*?\];/, 'const seedBaseLinks = ' + seedLinksJson + ';');
+    const blob = new Blob([html], { type:'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `painel-pontes-atualizado-${stamp}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }catch(err){
+    console.error('Falha ao gerar o HTML atualizado', err);
+    alert('Não foi possível gerar o arquivo atualizado. Tente novamente.');
+  }
+}
+
+function fmtMoney(v){
+  if(v===null || v===undefined || isNaN(v)) return '—';
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+function fmtPct(v){
+  if(v===null || v===undefined || isNaN(v)) return '—';
+  return v.toFixed(1).replace('.0','') + '%';
+}
+function fmtDate(v){
+  if(!v) return '—';
+  const parts = v.split('-');
+  if(parts.length!==3) return v;
+  const [y,m,d] = parts;
+  return `${d}/${m}/${y}`;
+}
+function fmtBytes(n){
+  if(n < 1024) return n + ' B';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/(1024*1024)).toFixed(1) + ' MB';
+}
+function computeStatus(prazo, currentStatus){
+  if(currentStatus === 'Concluído') return 'Concluído';
+  if(!prazo) return currentStatus || '';
+  const parts = prazo.split('-').map(Number);
+  if(parts.length !== 3) return currentStatus || '';
+  const [y,m,d] = parts;
+  const prazoDate = new Date(y, m-1, d);
+  const today = new Date(); today.setHours(0,0,0,0);
+  return prazoDate < today ? 'Atrasado' : 'No prazo';
+}
+function recomputeStatuses(){
+  let changed = false;
+  records.forEach(r=>{
+    const newStatus = computeStatus(r.prazo, r.status);
+    if(newStatus !== r.status){ r.status = newStatus; changed = true; }
+  });
+  return changed;
+}
+function statusPill(status){
+  if(status==='Atrasado') return '<span class="pill pill-terra">Atrasado</span>';
+  if(status==='No prazo') return '<span class="pill pill-navy">No prazo</span>';
+  if(status==='Concluído') return '<span class="pill pill-green">Concluído</span>';
+  return '—';
+}
+function bloqueioPill(b){
+  if(b==='SIM') return '<span class="pill pill-terra">Bloqueado</span>';
+  if(b==='NÃO') return '<span class="pill pill-navy">Livre</span>';
+  return '—';
+}
+function uniqueVals(key){
+  return [...new Set(records.map(r=>r[key]).filter(v=>v && v!=='-'))].sort();
+}
+function getFiltered(){
+  return records.filter(r=>{
+    if(filters.q && !r.ponte.toLowerCase().includes(filters.q.toLowerCase())) return false;
+    if(filters.bairro && r.bairro !== filters.bairro) return false;
+    if(filters.area && r.area !== filters.area) return false;
+    if(filters.status && r.status !== filters.status) return false;
+    if(filters.bloqueio && r.bloqueio !== filters.bloqueio) return false;
+    return true;
+  }).sort((a,b)=>{
+    let av = a[sort.key], bv = b[sort.key];
+    if(typeof av === 'string') av = (av||'').toLowerCase();
+    if(typeof bv === 'string') bv = (bv||'').toLowerCase();
+    if(av===null||av===undefined) av = sort.dir==='asc' ? Infinity : -Infinity;
+    if(bv===null||bv===undefined) bv = sort.dir==='asc' ? Infinity : -Infinity;
+    if(av<bv) return sort.dir==='asc' ? -1 : 1;
+    if(av>bv) return sort.dir==='asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function iconSvg(name){
+  const icons = {
+    pin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21C12 21 5 13.5 5 9a7 7 0 0 1 14 0c0 4.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>',
+    coin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12h6M12 8v8"/></svg>',
+    users: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><circle cx="17" cy="9" r="2.5"/><path d="M22 20c0-2.6-2-4.8-4.8-5.6"/></svg>',
+    lock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+    clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+    grid: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>',
+    folder: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>',
+    upload: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>',
+    file: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M14 2v6h6"/></svg>',
+    download: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12M12 16l-4-4M12 16l4-4"/><path d="M4 19h16"/></svg>',
+    trash: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>',
+    droplet: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z"/><path d="M9 16c0 1.4 1.2 2.5 3 2.5" stroke-linecap="round"/></svg>',
+  };
+  return icons[name] || '';
+}
+
+function renderApp(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <aside class="sidebar">
+      <svg class="sidebar-texture" viewBox="0 0 240 700" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,120 C 60,160 160,90 240,140 L240,60 C160,20 60,90 0,50 Z" fill="rgba(255,255,255,0.045)"/>
+        <path d="M0,520 C 70,480 170,560 240,510 L240,620 C170,660 70,590 0,630 Z" fill="rgba(255,255,255,0.04)"/>
+        <circle cx="40" cy="330" r="2.5" fill="rgba(255,255,255,.3)"/>
+        <circle cx="200" cy="380" r="2" fill="rgba(255,255,255,.22)"/>
+        <circle cx="170" cy="250" r="2" fill="rgba(255,255,255,.2)"/>
+      </svg>
+      <div class="brandmark">
+        <div class="badge">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 2 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 2 12 2Z" fill="#F58220"/></svg>
+        </div>
+        <div class="name"><span class="brand-csa">CSA</span><span class="brand-equatorial">Equatorial</span></div>
+      </div>
+      <nav class="navlist">
+        <div class="navlink ${activeTab==='painel'?'active':''}" data-tab="painel">${iconSvg('grid')}Painel</div>
+        <div class="navlink ${activeTab==='bases'?'active':''}" data-tab="bases">${iconSvg('folder')}Bases</div>
+      </nav>
+      <div class="sidebar-foot">
+        <svg class="node-line" width="100%" height="8" viewBox="0 0 200 8" preserveAspectRatio="none">
+          <line x1="2" y1="4" x2="198" y2="4" stroke="rgba(255,255,255,.22)" stroke-width="1"/>
+          ${Array.from({length:9},(_,i)=>`<circle cx="${2 + i*24.5}" cy="4" r="2" fill="#F58220"/>`).join('')}
+        </svg>
+        <div class="cap">CONTROLE DE PONTES</div>
+      </div>
+    </aside>
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <p class="topbar-eyebrow">Executiva de Comunidades</p>
+          <p class="topbar-title">Painel de Gestão das Comunidades CSA</p>
+          <p class="topbar-sub">Visão integrada das comunidades, clientes, condições de abastecimento e oportunidades de atuação.</p>
+        </div>
+        <div class="topbar-right">
+          ${activeTab==='painel' ? '<button class="btn btn-primary" id="addBtn">+ Nova ponte</button>' : ''}
+          <div class="csa-logo" title="CSA Equatorial — Concessionária de Saneamento do Amapá">
+            <svg viewBox="0 0 258 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logotipo CSA — Concessionária de Saneamento do Amapá">
+              <text x="0" y="52" font-family="'Space Grotesk',sans-serif" font-weight="700" font-size="54" letter-spacing="-1" fill="#2CA9E0">CSA</text>
+              <text x="130" y="24" font-family="'Inter',sans-serif" font-weight="600" font-size="13.5" fill="#2CA9E0">Concessionária</text>
+              <text x="130" y="40" font-family="'Inter',sans-serif" font-weight="600" font-size="13.5" fill="#2CA9E0">de Saneamento</text>
+              <text x="130" y="56" font-family="'Inter',sans-serif" font-weight="600" font-size="13.5" fill="#2CA9E0">do Amapá</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="content" id="tabContent"></div>
+    </div>
+  `;
+
+  document.querySelectorAll('.navlink').forEach(el=>{
+    el.addEventListener('click', ()=>{ activeTab = el.dataset.tab; renderApp(); });
+  });
+
+  if(activeTab==='painel'){
+    document.getElementById('addBtn').addEventListener('click', ()=>openForm(null));
+    renderPainelTab();
+  } else {
+    renderBasesTab();
+  }
+}
+
+function renderPainelTab(){
+  if(recomputeStatuses()){ persist(); }
+  const el = document.getElementById('tabContent');
+  const bairros = uniqueVals('bairro');
+  const areas = uniqueVals('area');
+  el.innerHTML = `
+    <div class="metrics" id="metrics"></div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Indicadores</h2>
+        <button class="btn-ghost-sm" id="toggleLabelsBtn">Mostrar valores nos gráficos</button>
+      </div>
+      <div class="charts-row">
+        <div>
+          <h2>Débito por bairro</h2>
+          <div style="position:relative;height:220px;">
+            <canvas id="barChart" role="img" aria-label="Gráfico de barras do débito total por bairro"></canvas>
+          </div>
+        </div>
+        <div>
+          <h2>Situação de bloqueio</h2>
+          <div style="position:relative;height:220px;">
+            <canvas id="donutChart" role="img" aria-label="Gráfico de rosca com pontes bloqueadas versus livres"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Análise por bairro e logradouro</h2>
+      </div>
+      <div class="toolbar">
+        <select id="drillBairroSelect">
+          <option value="">Selecione um bairro</option>
+          ${bairros.map(b=>`<option ${analysisFilters.bairro===b?'selected':''}>${b}</option>`).join('')}
+        </select>
+        <select id="drillLogradouroSelect">
+          <option value="">Selecione um logradouro</option>
+        </select>
+      </div>
+      <div id="drillChartWrap" style="position:relative;height:280px;"></div>
+      <div id="drillStats" style="margin-top:18px;display:none;"></div>
+    </div>
+    <div class="panel">
+      <h2>Pontes cadastradas</h2>
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Buscar ponte…" value="${filters.q}">
+        <select id="bairroSelect"><option value="">Todos os bairros</option>${bairros.map(b=>`<option ${filters.bairro===b?'selected':''}>${b}</option>`).join('')}</select>
+        <select id="areaSelect"><option value="">Todas as áreas</option>${areas.map(a=>`<option ${filters.area===a?'selected':''}>${a}</option>`).join('')}</select>
+        <select id="statusSelect">
+          <option value="">Todos os status</option>
+          <option ${filters.status==='No prazo'?'selected':''}>No prazo</option>
+          <option ${filters.status==='Atrasado'?'selected':''}>Atrasado</option>
+          <option ${filters.status==='Concluído'?'selected':''}>Concluído</option>
+        </select>
+        <select id="bloqueioSelect">
+          <option value="">Bloqueio: todos</option>
+          <option value="SIM" ${filters.bloqueio==='SIM'?'selected':''}>Bloqueado</option>
+          <option value="NÃO" ${filters.bloqueio==='NÃO'?'selected':''}>Livre</option>
+        </select>
+      </div>
+      <div id="tableWrap"></div>
+      <p class="footnote">Dados salvos automaticamente neste painel. Use o botão ADM, abaixo, sempre que fizer alterações manuais importantes.</p>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+        <button class="btn-ghost-sm" id="admDownloadBtn" title="Baixar o HTML do painel já com os dados atuais">${iconSvg('download')} ADM</button>
+      </div>
+    </div>
+  `;
+  const filtered = getFiltered();
+  renderMetrics(filtered);
+  renderCharts(filtered);
+  renderTable(filtered);
+  attachToolbarEvents();
+  renderDrillLogradouroSelect();
+  renderDrillChart();
+  renderDrillStats();
+  attachDrilldownEvents();
+}
+
+function renderMetrics(filtered){
+  const totalDebito = filtered.reduce((s,r)=>s+(r.debito||0),0);
+  const totalMatriculas = filtered.reduce((s,r)=>s+(r.matriculas||0),0);
+  const bloqueados = filtered.filter(r=>r.bloqueio==='SIM').length;
+  const atrasados = filtered.filter(r=>r.status==='Atrasado').length;
+  const totalOportunidade = filtered.reduce((s,r)=>s+(Number(r.oportunidade)||0),0);
+  const totalUcCea = filtered.reduce((s,r)=>s+(Number(r.ucCea)||0),0);
+  const comFonteAlternativa = filtered.filter(r=> r.fonteAbastecimento && r.fonteAbastecimento.trim() !== '' && r.fonteAbastecimento.trim() !== '-').length;
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric">
+      <div class="icon">${iconSvg('pin')}</div>
+      <div class="label">Pontes listadas</div>
+      <div class="value" title="${filtered.length}">${filtered.length}</div>
+    </div>
+    <div class="metric">
+      <div class="icon">${iconSvg('coin')}</div>
+      <div class="label">Débito total</div>
+      <div class="value" title="${fmtMoney(totalDebito)}">${fmtMoney(totalDebito)}</div>
+    </div>
+    <div class="metric">
+      <div class="icon">${iconSvg('users')}</div>
+      <div class="label">Matrículas CSA</div>
+      <div class="value" title="${totalMatriculas.toLocaleString('pt-BR')}">${totalMatriculas.toLocaleString('pt-BR')}</div>
+    </div>
+    <div class="metric">
+      <div class="icon">${iconSvg('grid')}</div>
+      <div class="label">UC CEA</div>
+      <div class="value" title="${totalUcCea.toLocaleString('pt-BR')}">${totalUcCea.toLocaleString('pt-BR')}</div>
+    </div>
+    <div class="metric">
+      <div class="icon">${iconSvg('droplet')}</div>
+      <div class="label">Fonte de abastecimento alternativa</div>
+      <div class="value" title="${comFonteAlternativa} ponte(s)">${comFonteAlternativa}</div>
+    </div>
+    <div class="metric good">
+      <div class="icon">${iconSvg('droplet')}</div>
+      <div class="label">Oportunidade de adesão</div>
+      <div class="value" title="${totalOportunidade.toLocaleString('pt-BR')}">${totalOportunidade.toLocaleString('pt-BR')}</div>
+    </div>
+    <div class="metric alert">
+      <div class="icon">${iconSvg('lock')}</div>
+      <div class="label">Pontes bloqueadas</div>
+      <div class="value" title="${bloqueados}">${bloqueados}</div>
+    </div>
+    <div class="metric warn">
+      <div class="icon">${iconSvg('clock')}</div>
+      <div class="label">Ações em atraso</div>
+      <div class="value" title="${atrasados}">${atrasados}</div>
+    </div>
+  `;
+}
+
+function renderCharts(filtered){
+  const byBairro = {};
+  const iarSumBairro = {}, iarCountBairro = {};
+  filtered.forEach(r=>{
+    byBairro[r.bairro] = (byBairro[r.bairro]||0) + (r.debito||0);
+    if(r.iar!=null && !isNaN(r.iar)){
+      iarSumBairro[r.bairro] = (iarSumBairro[r.bairro]||0) + Number(r.iar);
+      iarCountBairro[r.bairro] = (iarCountBairro[r.bairro]||0) + 1;
+    }
+  });
+  const bairroLabels = Object.keys(byBairro);
+  const bairroValues = Object.values(byBairro);
+  const bairroIarValues = bairroLabels.map(b=> iarCountBairro[b] ? +(iarSumBairro[b]/iarCountBairro[b]).toFixed(1) : null);
+
+  if(barChart) barChart.destroy();
+  const ctxBar = document.getElementById('barChart');
+  barChart = new Chart(ctxBar, {
+    data:{
+      labels: bairroLabels,
+      datasets:[
+        {
+          type:'bar', label:'Débito (R$)', data: bairroValues, backgroundColor:'#0F3F73',
+          borderRadius:4, maxBarThickness:28, yAxisID:'y', order:2
+        },
+        {
+          type:'line', label:'IAR (%)', data: bairroIarValues, borderColor:'#F58220',
+          backgroundColor:'rgba(245,130,32,.14)', pointBackgroundColor:'#F58220', pointBorderColor:'#fff',
+          pointBorderWidth:2, pointRadius:5, pointHoverRadius:6.5, borderWidth:3, tension:.35,
+          fill:true, spanGaps:true, yAxisID:'y1', order:1
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      layout:{ padding:{ top: showLabels ? 22 : 4 } },
+      plugins:{
+        legend:{
+          display:true, position:'top', align:'end',
+          labels:{ usePointStyle:true, pointStyle:'circle', boxWidth:7, boxHeight:7, padding:14, font:{size:11,weight:'600',family:"'Space Grotesk',sans-serif"}, color:'#5A6B80' }
+        },
+        tooltip:{ callbacks:{ label: c => c.dataset.yAxisID==='y1' ? `IAR: ${fmtPct(c.parsed.y)}` : `Débito: ${fmtMoney(c.parsed.y)}` } },
+        datalabels:{
+          display: ctx => showLabels && ctx.dataset.yAxisID==='y',
+          anchor:'end', align:'top', color:'#0B2C52', font:{size:11,weight:'600'}, formatter: v => 'R$ ' + (v/1000).toFixed(0) + 'k'
+        }
+      },
+      scales:{
+        y:{ position:'left', beginAtZero:true, ticks:{ callback:v=>'R$ '+(v/1000).toFixed(0)+'k', color:'#93A1B3' }, grid:{ color:'#EEF2F8' } },
+        y1:{ position:'right', min:0, suggestedMax:100, beginAtZero:true, ticks:{ callback:v=>v+'%', color:'#F58220', font:{size:11} }, grid:{ display:false } },
+        x:{ ticks:{ color:'#5A6B80', font:{size:11} }, grid:{ display:false } }
+      }
+    }
+  });
+
+  const sim = filtered.filter(r=>r.bloqueio==='SIM').length;
+  const nao = filtered.filter(r=>r.bloqueio==='NÃO').length;
+  if(donutChart) donutChart.destroy();
+  const ctxDonut = document.getElementById('donutChart');
+  donutChart = new Chart(ctxDonut, {
+    type:'doughnut',
+    data:{ labels:['Bloqueadas','Livres'], datasets:[{ data:[sim, nao], backgroundColor:['#B4472B','#0F3F73'], borderWidth:2, borderColor:'#FFFFFF' }] },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{
+        legend:{ display:false },
+        datalabels:{ display: ctx => showLabels && ctx.dataset.data[ctx.dataIndex] > 0, color:'#fff', font:{size:12,weight:'600'}, formatter: v => v }
+      }
+    }
+  });
+}
+
+function renderTable(filtered){
+  const wrap = document.getElementById('tableWrap');
+  if(filtered.length===0){
+    wrap.innerHTML = '<div class="empty">Nenhuma ponte encontrada com esses filtros.</div>';
+    return;
+  }
+  const cols = [
+    {key:'ponte', label:'Ponte'},
+    {key:'bairro', label:'Bairro'},
+    {key:'area', label:'Área'},
+    {key:'matriculas', label:'Matrículas'},
+    {key:'debito', label:'Débito'},
+    {key:'iar', label:'IAR'},
+    {key:'ucCea', label:'UC CEA'},
+    {key:'oportunidade', label:'Oport. de adesão'},
+    {key:'telhados', label:'Qtd. telhados'},
+    {key:'fonteAbastecimento', label:'Fonte de abastecimento'},
+    {key:'prazo', label:'Prazo'},
+    {key:'status', label:'Status'},
+    {key:'bloqueio', label:'Bloqueio'},
+  ];
+  wrap.innerHTML = `
+    <div style="overflow-x:auto;">
+    <table>
+      <thead><tr>
+        ${cols.map(c=>`<th data-key="${c.key}">${c.label} ${sort.key===c.key ? (sort.dir==='asc'?'↑':'↓') : ''}</th>`).join('')}
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${filtered.map(r=>`
+          <tr>
+            <td>${r.ponte}</td>
+            <td>${r.bairro}</td>
+            <td>${r.area||'—'}</td>
+            <td>${r.matriculas ?? '—'}</td>
+            <td>${fmtMoney(r.debito)}</td>
+            <td>${fmtPct(r.iar)}</td>
+            <td>${r.ucCea ?? '—'}</td>
+            <td>${r.oportunidade ?? '—'}</td>
+            <td>${r.telhados ?? '—'}</td>
+            <td>${r.fonteAbastecimento || '—'}</td>
+            <td>${fmtDate(r.prazo)}</td>
+            <td>${statusPill(r.status)}</td>
+            <td>${bloqueioPill(r.bloqueio)}</td>
+            <td>
+              <div class="row-actions">
+                <button class="icon-btn" data-edit="${r.id}" aria-label="Editar">✎</button>
+                <button class="icon-btn" data-del="${r.id}" aria-label="Excluir">✕</button>
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+  wrap.querySelectorAll('th[data-key]').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(sort.key===key){ sort.dir = sort.dir==='asc' ? 'desc' : 'asc'; }
+      else { sort.key = key; sort.dir = 'desc'; }
+      renderTable(getFiltered());
+    });
+  });
+  wrap.querySelectorAll('[data-edit]').forEach(btn=>{ btn.addEventListener('click', ()=>openForm(btn.dataset.edit)); });
+  wrap.querySelectorAll('[data-del]').forEach(btn=>{ btn.addEventListener('click', ()=>deleteRecord(btn.dataset.del)); });
+}
+
+function attachToolbarEvents(){
+  document.getElementById('searchInput').addEventListener('input', e=>{ filters.q = e.target.value; refreshPainel(); });
+  document.getElementById('bairroSelect').addEventListener('change', e=>{ filters.bairro = e.target.value; refreshPainel(); });
+  document.getElementById('areaSelect').addEventListener('change', e=>{ filters.area = e.target.value; refreshPainel(); });
+  document.getElementById('statusSelect').addEventListener('change', e=>{ filters.status = e.target.value; refreshPainel(); });
+  document.getElementById('bloqueioSelect').addEventListener('change', e=>{ filters.bloqueio = e.target.value; refreshPainel(); });
+
+  const admBtn = document.getElementById('admDownloadBtn');
+  if(admBtn) admBtn.addEventListener('click', downloadUpdatedHtml);
+
+  const toggleBtn = document.getElementById('toggleLabelsBtn');
+  toggleBtn.textContent = showLabels ? 'Ocultar valores nos gráficos' : 'Mostrar valores nos gráficos';
+  toggleBtn.classList.toggle('active', showLabels);
+  toggleBtn.addEventListener('click', ()=>{
+    showLabels = !showLabels;
+    renderCharts(getFiltered());
+    renderDrillChart();
+    toggleBtn.textContent = showLabels ? 'Ocultar valores nos gráficos' : 'Mostrar valores nos gráficos';
+    toggleBtn.classList.toggle('active', showLabels);
+  });
+}
+function refreshPainel(){
+  const filtered = getFiltered();
+  renderTable(filtered); renderMetrics(filtered); renderCharts(filtered);
+}
+
+/* ===== Análise por bairro e logradouro (filtros em cascata) ===== */
+function getLogradouroOptions(bairro){
+  const pool = bairro ? records.filter(r=>r.bairro===bairro) : records;
+  return [...new Set(pool.map(r=>r.ponte).filter(Boolean))].sort();
+}
+
+function renderDrillLogradouroSelect(){
+  const sel = document.getElementById('drillLogradouroSelect');
+  if(!sel) return;
+  const opts = getLogradouroOptions(analysisFilters.bairro);
+  sel.innerHTML = `<option value="">Selecione um logradouro</option>` +
+    opts.map(o=>`<option ${analysisFilters.logradouro===o?'selected':''}>${o}</option>`).join('');
+  sel.disabled = !analysisFilters.bairro;
+}
+
+function renderDrillChart(){
+  const wrap = document.getElementById('drillChartWrap');
+  if(!wrap) return;
+  if(!analysisFilters.bairro){
+    if(drillChart){ drillChart.destroy(); drillChart = null; }
+    wrap.innerHTML = '<div class="empty">Selecione um bairro para ver o débito e o IAR de cada logradouro.</div>';
+    return;
+  }
+  wrap.innerHTML = '<canvas id="drillChart" role="img" aria-label="Débito em coluna e IAR em linha, por logradouro no bairro selecionado"></canvas>';
+  const data = records.filter(r=>r.bairro===analysisFilters.bairro);
+  const byPonteDebito = {};
+  const iarSum = {}, iarCount = {};
+  data.forEach(r=>{
+    byPonteDebito[r.ponte] = (byPonteDebito[r.ponte]||0) + (r.debito||0);
+    if(r.iar!=null && !isNaN(r.iar)){
+      iarSum[r.ponte] = (iarSum[r.ponte]||0) + r.iar;
+      iarCount[r.ponte] = (iarCount[r.ponte]||0) + 1;
+    }
+  });
+  const labels = Object.keys(byPonteDebito);
+  const debitoValues = labels.map(l=>byPonteDebito[l]);
+  const iarValues = labels.map(l=> iarCount[l] ? +(iarSum[l]/iarCount[l]).toFixed(1) : null);
+  if(drillChart) drillChart.destroy();
+  const ctx = document.getElementById('drillChart');
+  const barGrad = ctx.getContext('2d').createLinearGradient(0,0,0,240);
+  barGrad.addColorStop(0,'#123A66');
+  barGrad.addColorStop(1,'#0B2C52');
+  drillChart = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {
+          type:'bar',
+          label:'Débito (R$)',
+          data:debitoValues,
+          backgroundColor:barGrad,
+          hoverBackgroundColor:'#0B2C52',
+          borderRadius:8,
+          borderSkipped:false,
+          maxBarThickness:36,
+          yAxisID:'y',
+          order:2,
+        },
+        {
+          type:'line',
+          label:'IAR (%)',
+          data:iarValues,
+          borderColor:'#F58220',
+          backgroundColor:'rgba(245,130,32,.14)',
+          pointBackgroundColor:'#F58220',
+          pointBorderColor:'#fff',
+          pointBorderWidth:2,
+          pointRadius:5,
+          pointHoverRadius:6.5,
+          borderWidth:3,
+          tension:.35,
+          fill:true,
+          spanGaps:true,
+          yAxisID:'y1',
+          order:1,
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      layout:{ padding:{ top: showLabels ? 28 : 14, right:8, left:2, bottom:2 } },
+      plugins:{
+        legend:{
+          display:true, position:'top', align:'end',
+          labels:{ usePointStyle:true, pointStyle:'circle', boxWidth:7, boxHeight:7, padding:16, font:{size:11.5,weight:'600',family:"'Space Grotesk',sans-serif"}, color:'#5A6B80' }
+        },
+        tooltip:{
+          backgroundColor:'#0B2C52', padding:10, cornerRadius:8, titleFont:{size:12,weight:'700'}, bodyFont:{size:12},
+          callbacks:{
+            label: c => c.dataset.yAxisID==='y1' ? `IAR: ${fmtPct(c.parsed.y)}` : `Débito: ${fmtMoney(c.parsed.y)}`
+          }
+        },
+        datalabels:{
+          display: ctx => showLabels && ctx.dataset.yAxisID==='y',
+          anchor:'end', align:'top', color:'#0B2C52', font:{size:10.5,weight:'700'},
+          formatter: v => 'R$ ' + (v/1000).toFixed(0) + 'k'
+        }
+      },
+      scales:{
+        y:{
+          position:'left', beginAtZero:true,
+          ticks:{ callback:v=>'R$ '+(v/1000).toFixed(0)+'k', color:'#93A1B3', font:{size:11} },
+          grid:{ color:'#EEF2F8' }
+        },
+        y1:{
+          position:'right', min:0, suggestedMax:100, beginAtZero:true,
+          ticks:{ callback:v=>v+'%', color:'#F58220', font:{size:11} },
+          grid:{ display:false }
+        },
+        x:{ ticks:{ color:'#5A6B80', font:{size:11}, autoSkip:false, maxRotation:40, minRotation:0 }, grid:{ display:false } }
+      }
+    }
+  });
+}
+
+function aggregateStats(list){
+  const matriculas = list.reduce((s,r)=> s + (Number(r.matriculas)||0), 0);
+  const ucCea = list.reduce((s,r)=> s + (Number(r.ucCea)||0), 0);
+  const debito = list.reduce((s,r)=> s + (Number(r.debito)||0), 0);
+  const iarList = list.filter(r=> r.iar!=null && !isNaN(r.iar)).map(r=>Number(r.iar));
+  const iar = iarList.length ? iarList.reduce((a,b)=>a+b,0)/iarList.length : null;
+  return { matriculas, ucCea, debito, iar };
+}
+
+function renderDrillStats(){
+  const box = document.getElementById('drillStats');
+  if(!box) return;
+  if(!analysisFilters.bairro){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  let scopeLabel, stats;
+  if(analysisFilters.logradouro){
+    const rec = records.find(r=> r.ponte===analysisFilters.logradouro && r.bairro===analysisFilters.bairro);
+    if(!rec){ box.style.display='none'; box.innerHTML=''; return; }
+    scopeLabel = `Indicadores do logradouro <strong>${rec.ponte}</strong> — ${rec.bairro}`;
+    stats = { matriculas: Number(rec.matriculas)||0, ucCea: Number(rec.ucCea)||0, debito: Number(rec.debito)||0, iar: rec.iar };
+  } else {
+    const list = records.filter(r=> r.bairro===analysisFilters.bairro);
+    scopeLabel = `Indicadores do bairro <strong>${analysisFilters.bairro}</strong> — todos os logradouros`;
+    stats = aggregateStats(list);
+  }
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="drill-scope-label">${scopeLabel}</div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="icon">${iconSvg('users')}</div>
+        <div class="label">Qtd. de matrículas CSA</div>
+        <div class="value" title="${stats.matriculas.toLocaleString('pt-BR')}">${stats.matriculas.toLocaleString('pt-BR')}</div>
+      </div>
+      <div class="metric">
+        <div class="icon">${iconSvg('grid')}</div>
+        <div class="label">Qtd. de UC CEA</div>
+        <div class="value" title="${stats.ucCea.toLocaleString('pt-BR')}">${stats.ucCea.toLocaleString('pt-BR')}</div>
+      </div>
+      <div class="metric">
+        <div class="icon">${iconSvg('pin')}</div>
+        <div class="label">IAR ${analysisFilters.logradouro ? '' : 'médio'}</div>
+        <div class="value" title="${fmtPct(stats.iar)}">${fmtPct(stats.iar)}</div>
+      </div>
+      <div class="metric alert">
+        <div class="icon">${iconSvg('coin')}</div>
+        <div class="label">Débito</div>
+        <div class="value" title="${fmtMoney(stats.debito)}">${fmtMoney(stats.debito)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function attachDrilldownEvents(){
+  const bairroSel = document.getElementById('drillBairroSelect');
+  const logSel = document.getElementById('drillLogradouroSelect');
+  if(!bairroSel || !logSel) return;
+  bairroSel.addEventListener('change', e=>{
+    analysisFilters.bairro = e.target.value;
+    analysisFilters.logradouro = '';
+    renderDrillLogradouroSelect();
+    renderDrillChart();
+    renderDrillStats();
+  });
+  logSel.addEventListener('change', e=>{
+    analysisFilters.logradouro = e.target.value;
+    renderDrillStats();
+  });
+}
+
+function openForm(id){
+  editingId = id;
+  const modal = document.getElementById('modalBg');
+  const record = id ? records.find(r=>r.id===id) : null;
+  document.getElementById('modalTitle').textContent = record ? 'Editar ponte' : 'Nova ponte';
+  document.getElementById('f_ponte').value = record?.ponte || '';
+  document.getElementById('f_bairro').value = record?.bairro || '';
+  document.getElementById('f_area').value = record?.area || '';
+  document.getElementById('f_matriculas').value = record?.matriculas ?? '';
+  document.getElementById('f_arrecadado').value = record?.arrecadado ?? '';
+  document.getElementById('f_iar').value = record?.iar ?? '';
+  document.getElementById('f_debito').value = record?.debito ?? '';
+  document.getElementById('f_ucCea').value = record?.ucCea ?? '';
+  document.getElementById('f_oportunidade').value = record?.oportunidade ?? '';
+  document.getElementById('f_telhados').value = record?.telhados ?? '';
+  document.getElementById('f_fonteAbastecimento').value = record?.fonteAbastecimento || '';
+  document.getElementById('f_prazo').value = record?.prazo || '';
+  document.getElementById('f_status').value = record?.status || '';
+  document.getElementById('f_bloqueio').value = record?.bloqueio || '';
+  document.getElementById('f_acao').value = record?.acao || '';
+  document.getElementById('f_analise').value = record?.analise || '';
+  modal.classList.add('open');
+}
+function closeForm(){ document.getElementById('modalBg').classList.remove('open'); editingId = null; }
+document.getElementById('cancelBtn').addEventListener('click', closeForm);
+document.getElementById('modalBg').addEventListener('click', e=>{ if(e.target.id==='modalBg') closeForm(); });
+document.getElementById('f_prazo').addEventListener('input', ()=>{
+  const statusEl = document.getElementById('f_status');
+  if(statusEl.value !== 'Concluído'){
+    statusEl.value = computeStatus(document.getElementById('f_prazo').value, statusEl.value);
+  }
+});
+
+document.getElementById('recordForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const data = {
+    ponte: document.getElementById('f_ponte').value.trim(),
+    bairro: document.getElementById('f_bairro').value.trim(),
+    area: document.getElementById('f_area').value.trim(),
+    matriculas: document.getElementById('f_matriculas').value ? Number(document.getElementById('f_matriculas').value) : null,
+    arrecadado: document.getElementById('f_arrecadado').value ? Number(document.getElementById('f_arrecadado').value) : null,
+    iar: document.getElementById('f_iar').value ? Number(document.getElementById('f_iar').value) : null,
+    debito: document.getElementById('f_debito').value ? Number(document.getElementById('f_debito').value) : null,
+    ucCea: document.getElementById('f_ucCea').value ? Number(document.getElementById('f_ucCea').value) : null,
+    oportunidade: document.getElementById('f_oportunidade').value ? Number(document.getElementById('f_oportunidade').value) : null,
+    telhados: document.getElementById('f_telhados').value ? Number(document.getElementById('f_telhados').value) : null,
+    fonteAbastecimento: document.getElementById('f_fonteAbastecimento').value.trim(),
+    prazo: document.getElementById('f_prazo').value,
+    status: computeStatus(document.getElementById('f_prazo').value, document.getElementById('f_status').value),
+    bloqueio: document.getElementById('f_bloqueio').value,
+    acao: document.getElementById('f_acao').value.trim(),
+    analise: document.getElementById('f_analise').value.trim(),
+  };
+  if(editingId){
+    const idx = records.findIndex(r=>r.id===editingId);
+    records[idx] = {...records[idx], ...data};
+  } else {
+    data.id = 'p' + Date.now();
+    records.push(data);
+  }
+  await persist();
+  closeForm();
+  renderApp();
+});
+
+async function deleteRecord(id){
+  if(!confirm('Excluir esta ponte do painel?')) return;
+  records = records.filter(r=>r.id!==id);
+  await persist();
+  refreshPainel();
+}
+
+/* ===== Bases tab — links de diretórios externos ===== */
+function renderBasesTab(){
+  const el = document.getElementById('tabContent');
+  el.innerHTML = `
+    <div class="panel">
+      <div class="bases-access">
+        ${basesUnlocked
+          ? `<span class="pill pill-green">Edição de links liberada nesta sessão</span>`
+          : `<button class="btn-ghost-sm" id="unlockBtn">${iconSvg('lock')} Sou da equipe — liberar edição de links</button>`
+        }
+      </div>
+      ${basesUnlocked ? `
+        <div class="link-form">
+          <input type="text" id="linkLabel" placeholder="Nome do diretório (ex.: Fotos das pontes — Congós)">
+          <input type="text" id="linkUrl" placeholder="Link de acesso (Google Drive, OneDrive, etc.)">
+          <button class="btn btn-primary" id="addLinkBtn">+ Adicionar link</button>
+        </div>
+      ` : `
+        <div class="empty" style="padding:22px 20px;">Abaixo estão os diretórios disponíveis para consulta e download.</div>
+      `}
+      <div class="file-list" id="fileList"></div>
+    </div>
+  `;
+  renderLinkList();
+
+  const unlockBtn = document.getElementById('unlockBtn');
+  if(unlockBtn){
+    unlockBtn.addEventListener('click', ()=>{
+      const code = prompt('Digite o código de acesso para liberar a edição de links:');
+      if(code === null) return;
+      if(code.trim() === UPLOAD_CODE){
+        basesUnlocked = true;
+        renderBasesTab();
+      } else {
+        alert('Código incorreto.');
+      }
+    });
+  }
+
+  const addBtn = document.getElementById('addLinkBtn');
+  if(addBtn) addBtn.addEventListener('click', addLink);
+}
+
+function renderLinkList(){
+  const listEl = document.getElementById('fileList');
+  if(!listEl) return;
+  if(baseLinks.length===0){
+    listEl.innerHTML = '<div class="empty">Nenhum diretório cadastrado ainda.</div>';
+    return;
+  }
+  listEl.innerHTML = baseLinks.map(l=>`
+    <div class="file-row">
+      <div class="f-icon">${iconSvg('folder')}</div>
+      <div class="f-info">
+        <div class="f-name">${l.label}</div>
+        <div class="f-meta">${l.url}</div>
+      </div>
+      <div class="row-actions">
+        <a class="icon-btn" href="${l.url}" target="_blank" rel="noopener noreferrer" aria-label="Abrir diretório">${iconSvg('download')}</a>
+        ${basesUnlocked ? `<button class="icon-btn" data-dell="${l.id}" aria-label="Remover">${iconSvg('trash')}</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('[data-dell]').forEach(btn=> btn.addEventListener('click', ()=> removeLink(btn.dataset.dell)));
+}
+
+async function addLink(){
+  const labelEl = document.getElementById('linkLabel');
+  const urlEl = document.getElementById('linkUrl');
+  const label = labelEl.value.trim();
+  let url = urlEl.value.trim();
+  if(!label || !url){ alert('Preencha o nome do diretório e o link de acesso.'); return; }
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  baseLinks.push({ id:'l' + Date.now(), label, url, addedAt: Date.now() });
+  await persistBaseLinks();
+  labelEl.value = '';
+  urlEl.value = '';
+  renderLinkList();
+}
+
+async function removeLink(id){
+  if(!confirm('Remover este link de diretório?')) return;
+  baseLinks = baseLinks.filter(l=>l.id!==id);
+  await persistBaseLinks();
+  renderLinkList();
+}
+
+async function persistBaseLinks(){
+  try{ await storageSet(BASES_LINKS_KEY, JSON.stringify(baseLinks), BASES_SHARED); }
+  catch(e){ console.error('Falha ao salvar links de diretórios', e); }
+}
+
+loadData();
+</script>
+
+
+</body></html>
